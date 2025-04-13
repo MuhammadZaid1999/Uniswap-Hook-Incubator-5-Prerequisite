@@ -57,6 +57,7 @@ contract Base {
     // State variables
     string private privateVar = "my private variable";
     string internal internalVar = "my internal variable";
+    string internalVar1 = "my internal variable1";
     string public publicVar = "my public variable";
     // State variables cannot be external so this code won't compile.
     // string external externalVar = "my external variable";
@@ -85,11 +86,13 @@ contract Child is Base {
 
         // privateVar = "my child private variable"; ----> DeclarationError: Undeclared identifier.
         internalVar = "my child internal variable";
+        internalVar1 = "my child internal variable1";
         publicVar = "my child public variable";
     }
 
     function setPrivateVar() external {
         internalVar = "my child internal variable through function";
+        internalVar1 = "my child internal variable1 through function";
         publicVar = "my child internal variable through function";
     }
 }

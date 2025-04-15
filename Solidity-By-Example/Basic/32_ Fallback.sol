@@ -67,11 +67,14 @@ contract SendToFallback {
 contract FallbackInputOutput {
     address immutable target;
 
+    event fallbackCalled();
+
     constructor(address _target) {
         target = _target;
     }
 
     fallback(bytes calldata data) external payable returns (bytes memory) {
+        emit fallbackCalled();
         (bool ok, bytes memory res) = target.call{value: msg.value}(data);
         require(ok, "call failed");
         return res;
@@ -107,6 +110,12 @@ contract TestFallbackInputOutput {
 
     function test1(address _fallback, bytes calldata data) external payable {
         (bool ok, bytes memory res) = _fallback.call{value: msg.value}(data);
+        require(ok, "call failed");
+        emit Log(res);
+    }
+
+    function test2(address _fallback) external payable {
+        (bool ok, bytes memory res) = _fallback.call{value: msg.value}(abi.encodeCall(Counter.inc1, ()));
         require(ok, "call failed");
         emit Log(res);
     }

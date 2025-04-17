@@ -11,27 +11,31 @@ pragma solidity ^0.8.26;
 contract Callee {
     uint256 public x;
     uint256 public value;
+    address public addr;
 
-    function setX(uint256 _x) public returns (uint256) {
+    function setX(uint256 _x) public returns (uint256, address) {
         x = _x;
-        return x;
+        addr = msg.sender;
+
+        return (x, addr);
     }
 
     function setXandSendEther(uint256 _x)
         public
         payable
-        returns (uint256, uint256)
+        returns (uint256, uint256, address)
     {
         x = _x;
+        addr = msg.sender;
         value = msg.value;
 
-        return (x, value);
+        return (x, value, addr);
     }
 }
 
 contract Caller {
     function setX(Callee _callee, uint256 _x) public {
-        uint256 x = _callee.setX(_x);
+        (uint256 x, address addr) = _callee.setX(_x);
     }
 
     function setXFromAddress(address _addr, uint256 _x) public {
@@ -44,12 +48,12 @@ contract Caller {
     }
 
     function setXandSendEther(Callee _callee, uint256 _x) public payable {
-        (uint256 x, uint256 value) =
+        (uint256 x, uint256 value, address addr) =
             _callee.setXandSendEther{value: msg.value}(_x);
     }
 
     function setXandSendEtherfromAddress(address _callee, uint256 _x) public payable {
-        (uint256 x, uint256 value) = Callee(_callee).setXandSendEther{value: msg.value}(_x);
+        (uint256 x, uint256 value, address addr) = Callee(_callee).setXandSendEther{value: msg.value}(_x);
     }
 
     function setXandSendEtherfromAddress2(address _callee, uint256 _x) public payable {

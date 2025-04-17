@@ -13,9 +13,9 @@ contract Callee {
     uint256 public value;
     address public addr;
 
-    function setX(uint256 _x) public returns (uint256, address) {
+    function setX(uint256 _x, address _addr) public returns (uint256, address) {
         x = _x;
-        addr = msg.sender;
+        addr = _addr;
 
         return (x, addr);
     }
@@ -35,16 +35,16 @@ contract Callee {
 
 contract Caller {
     function setX(Callee _callee, uint256 _x) public {
-        (uint256 x, address addr) = _callee.setX(_x);
+        (uint256 x, address addr) = _callee.setX(_x, msg.sender);
     }
 
     function setXFromAddress(address _addr, uint256 _x) public {
         Callee callee = Callee(_addr);
-        callee.setX(_x);
+        callee.setX(_x, msg.sender);
     }
 
     function setXFromAddress2(address _callee, uint256 _x) public {
-        Callee(_callee).setX(_x);
+        Callee(_callee).setX(_x, msg.sender);
     }
 
     function setXandSendEther(Callee _callee, uint256 _x) public payable {

@@ -103,15 +103,7 @@ contract A {
         emit DelegateResponse(success, data);
     }
 
-    function getSelector(string calldata _func)
-        external
-        pure
-        returns (bytes4 )
-    {
-        return (bytes4(keccak256(bytes(_func))));
-    }
-
-    // only for functions with empty params
+    // only for functions with empty params - pass string function signature
     function getSelector1(string calldata _func)
         external
         pure

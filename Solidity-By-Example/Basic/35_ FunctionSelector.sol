@@ -26,9 +26,21 @@ contract Transfers {
         balances[_addr] += _amount;
     }
 
-    function transfer(address _owner, address _spender, uint256 _amount)
+     function transfer1(address _addr, uint256 _amount)
+        public  
+    {
+        balances[_addr] += _amount;
+    }
+
+    function transferFrom(address _owner, address _spender, uint256 _amount)
         public  
         payable 
+    {
+        allowance[_owner][_spender] += _amount; 
+    }
+
+    function transferFrom1(address _owner, address _spender, uint256 _amount)
+        public
     {
         allowance[_owner][_spender] += _amount; 
     }
@@ -37,10 +49,10 @@ contract Transfers {
 
 contract FunctionSelector {
     /*
-    "transfer(address,uint256)"
-    0xa9059cbb
-    "transferFrom(address,address,uint256)"
-    0x23b872dd
+        "transfer(address,uint256)" - 0xa9059cbb
+        "transfer1(address,uint256)" - 0x09921939
+        "transferFrom(address,address,uint256)" - 0x23b872dd
+        "transferFrom1(address,address,uint256)" - 0x35d39414
     */
 
     mapping (address => uint256) public balances;
@@ -53,48 +65,53 @@ contract FunctionSelector {
         pure
         returns (bytes4)
     {
-        return bytes4(keccak256(bytes(_func)));
+        bytes4 selector = bytes4(keccak256(bytes(_func)));
+        return selector;
+
+        /*
+            --- return directly ---
+            return bytes4(keccak256(bytes(_func)));
+        */
     }
 
-    function transfer(address _target, string memory selector, address _addr, uint256 _amount)
+    function transfer(address _target, bytes4 selector, address _addr, uint256 _amount)
+        public  
+        payable 
+    {
+        bytes memory _data = abi.encodeWithSelector(selector, _addr, _amount);
+         (bool success, bytes memory data) = _target.call{value: msg.value}(_data);
+
+        emit Response(success, data);
+    }
+
+    function transfer1(address _target, bytes4 selector, address _addr, uint256 _amount)
+        external
+    {
+         (bool success, bytes memory data) = _target.delegatecall(
+            abi.encodeWithSelector(selector, _addr, _amount)
+        );
+
+        emit Response(success, data);
+    }
+
+    function transferFrom(address _target, bytes4 selector, address _owner, address _spender, uint256 _amount)
         public  
         payable 
     {
          (bool success, bytes memory data) = _target.call{value: msg.value}(
-            abi.encodeWithSignature(selector, _addr, _amount)
+            abi.encodeWithSelector(selector, _owner, _spender,  _amount)
         );
 
         emit Response(success, data);
     }
 
-    function transfer1(address _target, string memory selector, address _addr, uint256 _amount)
-        external
-    {
-         (bool success, bytes memory data) = _target.delegatecall{gas: 500}(
-            abi.encodeWithSignature(selector, _addr, _amount)
-        );
-
-        emit Response(success, data);
-    }
-
-    function transferFrom(address _target, string memory selector, address _owner, address _spender, uint256 _amount)
+    function transferFrom1(address _target, bytes4 selector, address _owner, address _spender, uint256 _amount)
         external 
     {
-         (bool success, bytes memory data) = _target.delegatecall(
-            abi.encodeWithSignature(selector, _owner, _spender,  _amount)
-        );
+        bytes memory _data = abi.encodeWithSelector(selector, _owner, _spender,  _amount);
+         (bool success, bytes memory data) = _target.delegatecall(_data);
 
         emit Response(success, data);
     }
 
-    function transferFrom1(address _target, string memory selector, address _owner, address _spender, uint256 _amount)
-        public  
-        payable 
-    {
-         (bool success, bytes memory data) = _target.call{value: msg.value, gas: 500}(
-            abi.encodeWithSignature(selector, _owner, _spender,  _amount)
-        );
-
-        emit Response(success, data);
-    }
 }

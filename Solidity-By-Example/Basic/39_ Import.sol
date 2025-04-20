@@ -20,6 +20,8 @@ contract Import {
     // Initialize Foo.sol
     Foo public foo = new Foo();
 
+    Foo.Point1 public point = Foo.Point1(10, 20);
+
     // Test Foo.sol by getting its name.
     function getFooName() public view returns (string memory) {
         return foo.name();
@@ -44,6 +46,22 @@ contract Import {
 
     function getPoints1(uint256 x, uint256 y) public pure returns (pt memory) {
         return getPoint(x, y);
+    }
+
+    function setFooPoint(uint256 x, uint256 y) public {
+        point = Foo.Point1(x, y);
+    }
+
+    function setFooPoint1(uint256 x, uint256 y) public {
+        Foo.Point1 memory pt1 = Foo.Point1(x, y);
+        point = pt1;
+    }
+
+    function setFooPoint2(uint256 x, uint256 y) external returns(Foo.Point1 memory) {
+        Foo.Point1 storage pt1 = point;
+        pt1.x = x;
+        pt1.y = y;
+        return pt1;
     }
 
     function getError(address addr) public view{

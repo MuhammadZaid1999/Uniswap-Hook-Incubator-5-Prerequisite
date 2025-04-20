@@ -8,7 +8,7 @@ interface IERC20 {
 
 contract Token {
     function transfer(address, uint256) external {}
-    function transfer1(address, uint256) external payable {}
+    function transferFrom(address, address, uint256) external payable {}
 }
 
 contract AbiEncode {
@@ -18,7 +18,7 @@ contract AbiEncode {
     }
 
     function test1(address _contract, bytes calldata data) external payable {
-        (bool ok,) = _contract.call(data);
+        (bool ok,) = _contract.call{value: msg.value}(data);
         require(ok, "call failed");
     }
 
@@ -31,13 +31,13 @@ contract AbiEncode {
         return abi.encodeWithSignature("transfer(address,uint256)", to, amount);
     }
 
-    function encodeWithSignature1(string memory func, address to, uint256 amount)
+    function encodeWithSignature1(string memory func, address from, address to, uint256 amount)
         external
         pure
         returns (bytes memory)
     {
         // Typo is not checked - "transfer(address, uint)"
-        return abi.encodeWithSignature(func, to, amount);
+        return abi.encodeWithSignature(func, from, to, amount);
     }
 
     function encodeWithSelector(address to, uint256 amount)
@@ -64,7 +64,7 @@ contract AbiEncode {
         returns (bytes memory)
     {
         // Typo and type errors will not compile
-        return abi.encodeCall(IERC20.transfer, (to, amount));
+        return abi.encodeCall(Token.transfer, (to, amount));
     }
 
     function encodeCall1(address from, address to, uint256 amount)

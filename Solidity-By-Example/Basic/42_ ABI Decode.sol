@@ -31,6 +31,22 @@ contract AbiDecode {
         return abi.encode(x, addr, arr, myStruct);
     }
 
+    function encode2(
+        uint256 x,
+        address addr,
+        uint256[6] calldata arr
+    ) external pure returns (bytes memory) {
+        return abi.encode(x, addr, arr);
+    }
+
+    function encode3(
+        uint256 x,
+        address addr,
+        uint256[] calldata arr
+    ) external pure returns (bytes memory) {
+        return abi.encode(x, addr, arr);
+    }
+
     function decode(bytes calldata data)
         external
         pure
@@ -59,5 +75,49 @@ contract AbiDecode {
         // (uint x, address addr, uint[] memory arr, MyStruct myStruct) = ...
         (x, addr, arr, myStruct) =
             abi.decode(data, (uint256, address, uint256[4], MyStruct));
+    }
+
+    // ---------- for encode2 --------
+    function decode2(bytes calldata data)
+        external
+        pure
+        returns (
+            uint256 x,
+            address addr,
+            uint256[4] memory arr
+        )
+    {
+        // (uint x, address addr, uint[] memory arr, MyStruct myStruct) = ...
+        (x, addr, arr) =
+            abi.decode(data, (uint256, address, uint256[4]));
+    }
+
+     function decode3(bytes calldata data)
+        external
+        pure
+        returns (
+            uint256 x,
+            address addr,
+            uint256[6] memory arr
+        )
+    {
+        // (uint x, address addr, uint[] memory arr, MyStruct myStruct) = ...
+        (x, addr, arr) =
+            abi.decode(data, (uint256, address, uint256[6]));
+    }
+
+    // ---------- for encode3 --------
+    function decode4(bytes calldata data)
+        external
+        pure
+        returns (
+            uint256 x,
+            address addr,
+            uint256[] memory arr
+        )
+    {
+        // (uint x, address addr, uint[] memory arr, MyStruct myStruct) = ...
+        (x, addr, arr) =
+            abi.decode(data, (uint256, address, uint256[]));
     }
 }

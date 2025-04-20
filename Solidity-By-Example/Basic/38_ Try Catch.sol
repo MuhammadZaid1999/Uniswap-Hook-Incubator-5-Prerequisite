@@ -137,10 +137,24 @@ contract Bar {
         try foo.myFunc2(_i) returns (address result) {
             addr = result;
         } catch(bytes memory _reason) {
-            // catch failing assert(
+            // catch failing assert
             reason1 = _reason;
         } catch Error(string memory _reason) {
             // catch failing revert() and require()
+            reason = _reason;
+        } 
+    }
+
+    function tryCatchExternalCall8(address _i) public returns (address addr, string memory reason, bytes memory reason1){
+        try foo.myFunc2(_i) returns (address result) {
+            addr = result;
+        } catch(bytes memory _reason) {
+            // catch failing assert
+            emit LogBytes(_reason);
+            reason1 = _reason;
+        } catch Error(string memory _reason) {
+            // catch failing revert() and require()
+            emit Log(_reason);
             reason = _reason;
         } 
     }
@@ -149,10 +163,11 @@ contract Bar {
     // tryCatchNewContract(0x0000000000000000000000000000000000000000) => Log("invalid address")
     // tryCatchNewContract(0x0000000000000000000000000000000000000001) => LogBytes("")
     // tryCatchNewContract(0x0000000000000000000000000000000000000002) => Log("Foo created")
-    function tryCatchNewContract(address _owner) public {
-        try new Foo(_owner) returns (Foo foo) {
-            // you can use variable foo here
+    function tryCatchNewContract(address _owner) public returns (Foo){
+        Foo _foo; 
+        try new Foo(_owner) returns (Foo fooo) {
             emit Log("Foo created");
+            _foo = fooo;
         } catch Error(string memory reason) {
             // catch failing revert() and require()
             emit Log(reason);
@@ -160,6 +175,7 @@ contract Bar {
             // catch failing assert()
             emit LogBytes(reason);
         }
+        return _foo;
     }
 
     function tryCatchNewContract1(address _owner) public {
@@ -169,6 +185,11 @@ contract Bar {
         } catch {
             emit Log("Foo not created");
         }
+    }
+
+    // Without Error Handling
+    function tryCatchNewContract2(address _owner) public {
+        new Foo(_owner);
     }
 
 }

@@ -106,16 +106,16 @@ contract CarFactory {
     }
 
     function buyCar() external payable {
-        car1.buyCar(msg.sender);
+        car1.buyCar{value: msg.value}(msg.sender);
     }
 
     function buyCar1(uint256 index) external payable {
-        cars[index].buyCar(msg.sender);
+        cars[index].buyCar{value: msg.value}(msg.sender);
     }
 
      function buyCar2(uint256 index) external payable returns (string memory){
         Car car = cars[index];
-        return car.buyCar(msg.sender);
+        return car.buyCar{value: msg.value}(msg.sender);
     }
 
     function getCar(uint256 _index)

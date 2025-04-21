@@ -75,11 +75,9 @@ contract GasGolf {
         uint256 d = _total + 10;
         val = a + b + c + d;
 
-        uint8 iter = 10;
+        uint8[] memory _arr = new uint8[](10);
 
-        uint8[] memory _arr = new uint8[](iter);
-
-        for (uint8 i = 0; i < iter;){ 
+        for (uint8 i = 0; i < 10;){ 
             _arr[i] = i;
 
             unchecked {
@@ -89,3 +87,5 @@ contract GasGolf {
         numsbers = _arr;
     }
 }
+
+

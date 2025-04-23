@@ -33,8 +33,14 @@ library Math {
 }
 
 contract TestMath {
+    using Math for uint256;
+
     function testSquareRoot(uint256 x) public pure returns (uint256) {
         return Math.sqrt(x);
+    }
+
+    function testSquareRoot1(uint256 x) public pure returns (uint256) {
+        return x.sqrt();
     }
 
     function testPower(uint256 x) public pure returns (uint256) {
@@ -45,11 +51,15 @@ contract TestMath {
         return Math.pow(x);
     }
 
+    function testPower2(uint256 x) public pure returns (uint256) {
+        return x.pow();
+    }
+
     function testAdd(uint256 x) public pure returns (uint256) {
         return Math.c + x;
     }
 
-     function testDiv(uint256 x) public pure returns (uint256) {
+    function testDiv(uint256 x) public pure returns (uint256) {
         return x / Math.d;
     }
 }
@@ -91,5 +101,14 @@ contract TestArray {
         assert(arr.length == 2);
         assert(arr[0] == 0);
         assert(arr[1] == 2);
+    }
+
+    function testStruct() public pure returns(Array.Str memory){
+        return Array.testStruct(1, "hello", 0x746d6345, address(2));
+    }
+
+    function testStruct1() public pure returns(Array.Str memory str){
+        str = Array.Str(1, "hello", 0x746d6345, address(2));
+        return str;
     }
 }

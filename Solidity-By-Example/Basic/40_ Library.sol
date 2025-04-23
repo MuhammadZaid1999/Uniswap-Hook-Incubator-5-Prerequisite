@@ -30,10 +30,27 @@ library Math {
     function pow(uint256 y) internal pure returns (uint256 z) {
         z = y ** a;
     }
+
+    function add() internal pure returns (uint256) {
+        return a + b;
+    }
+
+    function add1() internal pure returns (bool) {
+        return  a + b == c ? true : false;
+    }
+
+    function add2(uint256 y) internal pure returns (bool) {
+        return  a + y == c ? true : false;
+    }
+
+    function add2(bool y) internal pure returns (bool) {
+        return  y ? true : false;
+    }
 }
 
 contract TestMath {
     using Math for uint256;
+    using Math for bool;
 
     function testSquareRoot(uint256 x) public pure returns (uint256) {
         return Math.sqrt(x);
@@ -61,6 +78,26 @@ contract TestMath {
 
     function testDiv(uint256 x) public pure returns (uint256) {
         return x / Math.d;
+    }
+
+    function testB() public pure returns (uint256) {
+        return Math.b;
+    }
+
+    function testAdd() public pure returns (uint256) {
+        return Math.add();
+    }
+
+    function testAdd1() public pure returns (bool) {
+        return Math.add1();
+    }
+
+    function testAdd2(uint256 x) public pure returns (bool) {
+        return x.add2();
+    }
+
+    function testAdd2(bool x) public pure returns (bool) {
+        return x.add2();
     }
 }
 

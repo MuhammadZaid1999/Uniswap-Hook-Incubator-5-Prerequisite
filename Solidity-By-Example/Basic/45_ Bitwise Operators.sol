@@ -1,11 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-contract BitwiseOps {
+contract BitwiseOps {                                            
     // x     = 1110 = 8 + 4 + 2 + 0 = 14
     // y     = 1011 = 8 + 0 + 2 + 1 = 11
-    // x & y = 1010 = 8 + 0 + 2 + 0 = 10
+    // x & y = 1010 = 8 + 1110 + 2 + 0 = 10
     function and(uint256 x, uint256 y) external pure returns (uint256) {
+        return x & y;
+    }
+
+    function and(int32 x, int32 y) external pure returns (int32) {
+        return x & y;
+    }
+
+    function and(uint8 x, uint8 y) external pure returns (uint8) {
+        return x & y;
+    }
+
+    function and(int64 x, int64 y) external pure returns (int64) {
         return x & y;
     }
 
@@ -16,6 +28,18 @@ contract BitwiseOps {
         return x | y;
     }
 
+    function or(int32 x, int32 y) external pure returns (int32) {
+        return x | y;
+    }
+
+    function or(uint8 x, uint8 y) external pure returns (uint8) {
+        return x | y;
+    }
+
+    function or(int64 x, int64 y) external pure returns (int64) {
+        return x | y;
+    }
+
     // x     = 1100 = 8 + 4 + 0 + 0 = 12
     // y     = 0101 = 0 + 4 + 0 + 1 = 5
     // x ^ y = 1001 = 8 + 0 + 0 + 1 = 9
@@ -23,9 +47,33 @@ contract BitwiseOps {
         return x ^ y;
     }
 
+    function xor(int32 x, int32 y) external pure returns (int32) {
+        return x ^ y;
+    }
+
+    function xor(uint8 x, uint8 y) external pure returns (uint8) {
+        return x ^ y;
+    }
+
+    function xor(int64 x, int64 y) external pure returns (int64) {
+        return x ^ y;
+    }
+
     // x  = 00001100 =   0 +  0 +  0 +  0 + 8 + 4 + 0 + 0 = 12
     // ~x = 11110011 = 128 + 64 + 32 + 16 + 0 + 0 + 2 + 1 = 243
+    function not(uint256 x) external pure returns (uint256) {
+        return ~x;
+    }
+
+    function not(int32 x) external pure returns (int32) {
+        return ~x;
+    }
+
     function not(uint8 x) external pure returns (uint8) {
+        return ~x;
+    }
+
+     function not(int64 x) external pure returns (int64) {
         return ~x;
     }
 
@@ -42,6 +90,14 @@ contract BitwiseOps {
         return x << bits;
     }
 
+    function shiftLeft(uint8 x, uint8 bits)
+        external
+        pure
+        returns (uint8)
+    {
+        return x << bits;
+    }
+
     // 8  >> 0 = 1000 --> 1000 = 8
     // 8  >> 1 = 1000 --> 0100 = 4
     // 8  >> 2 = 1000 --> 0010 = 2
@@ -52,6 +108,14 @@ contract BitwiseOps {
         external
         pure
         returns (uint256)
+    {
+        return x >> bits;
+    }
+
+    function shiftRight(uint8 x, uint8 bits)
+        external
+        pure
+        returns (uint8)
     {
         return x >> bits;
     }
@@ -80,6 +144,15 @@ contract BitwiseOps {
         return x % (1 << n);
     }
 
+     function getLastNBitsUsingMod(uint8 x, uint8 n)
+        external
+        pure
+        returns (uint8)
+    {
+        // 1 << n = 2 ** n
+        return uint8(x % (1 << n));
+    }
+
     // Get position of most significant bit
     // x = 1100 = 12, most significant bit = 1000, so this function will return 3
     function mostSignificantBit(uint256 x) external pure returns (uint256) {
@@ -88,6 +161,14 @@ contract BitwiseOps {
             ++i;
         }
         return i;
+    }
+
+    function mostSignificantBit(uint8 x) external pure returns (uint8) {
+        uint256 i = 0;
+        while ((x >>= 1) > 0) {
+            ++i;
+        }
+        return uint8(i);
     }
 
     // Get first n bits from x
@@ -103,6 +184,19 @@ contract BitwiseOps {
         // x & mask = 1100 = 12
         uint256 mask = ((1 << n) - 1) << (len - n);
         return x & mask;
+    }
+
+    function getFirstNBits(uint8 x, uint8 n, uint8 len)
+        external
+        pure
+        returns (uint8)
+    {
+        // Example
+        // x        = 1110 = 14, n = 2, len = 4
+        // mask     = 1100 = 12
+        // x & mask = 1100 = 12
+        uint256 mask = ((1 << n) - 1) << (len - n);
+        return uint8(x & mask);
     }
 }
 

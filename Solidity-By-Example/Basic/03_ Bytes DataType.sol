@@ -14,11 +14,11 @@ Fixed-Size Bytes (bytes1 to bytes32)
 */
 
 contract FixedBytes {
-    bytes4 example = 0x12345678;
+    bytes4 public example = 0x12345678;
     bytes1 firstByte = example[0]; // 0x12
 
-    bytes4 public constant number = 0x12345678;
-    bytes4 public number1 = 0x12345678;  
+    bytes4 public constant number = 0x12340C02;
+    bytes4 public number1 = 0x12340C02;  
 
     /*
         Fixed-size byte arrays have a specified length, ranging from 1 to 32 bytes. 
@@ -36,8 +36,8 @@ contract FixedBytes {
 
     function getIndividualBytes() public pure returns (bytes1, bytes1, bytes1, bytes1) { 
         bytes1 byte1 = bytes1(number[0]); 
-        bytes1 byte2 = bytes1(number[1]); 
-        bytes1 byte3 = bytes1(number[2]); 
+        bytes1 byte2 = number[1]; 
+        bytes1 byte3 = number[2]; 
         bytes1 byte4 = bytes1(number[3]); 
   
         return (byte1, byte2, byte3, byte4); 
@@ -96,7 +96,7 @@ Dynamic-Size Bytes (bytes)
         Storage Considerations: While flexible, dynamic arrays can be more gas-intensive than fixed-size arrays due to additional storage operations.
 */
 contract DynamicBytes{
-    bytes dynamicBytes = new bytes(5);
+    bytes public dynamicBytes = new bytes(5);
     bytes public dynamicData; 
 
     function setBytes() public returns(uint){
@@ -110,10 +110,19 @@ contract DynamicBytes{
     function setDynamicData(bytes calldata _data) public { 
         dynamicData = _data; 
     } 
+
+    function popDynamicData() public { 
+        dynamicData.pop(); 
+        dynamicBytes.pop();
+    } 
   
     // Get the length of the dynamic byte array 
     function getDynamicDataLength() public view returns (uint256) { 
         return dynamicData.length; 
+    } 
+
+    function getDynamicByteLength() public view returns (uint256) { 
+        return dynamicBytes.length; 
     } 
 
 }
@@ -127,13 +136,13 @@ The maximum size of the array is 2^256-1.
 */
 
 contract ByteArray { 
-    bytes3[] b = new bytes3[](2);
-    bytes2[] b1;
+    bytes3[] public b = new bytes3[](2);
+    bytes2[] public b1;
 
-    bytes byteArray; // declare an empty array of bytes
-    bytes1 byte1Array; // declare an array of 1 byte
-    bytes2 byte2Array; // declare an array of 2 bytes
-    bytes32 byte32Array; // declare an array of 32 bytes
+    bytes public byteArray; // declare an empty array of bytes
+    bytes1 public byte1Array; // declare an array of 1 byte
+    bytes2 public byte2Array; // declare an array of 2 bytes
+    bytes32 public byte32Array; // declare an array of 32 bytes
 
     function concatenate(bytes memory a, bytes memory b) public pure returns (bytes memory) { 
         bytes memory result = new bytes(a.length + b.length); 
@@ -148,9 +157,10 @@ contract ByteArray {
         return result; 
     } 
 
-    function concatenate1() public pure returns (bytes memory) { 
+    function concatenate1() public pure returns (bytes memory, bytes4 a) { 
         bytes memory byteArray1 = hex"deadbeef";
-        return byteArray1;
+        a = hex"cd";
+        return (byteArray1, a);
     } 
 
     function concatenate2() public { 
@@ -169,6 +179,11 @@ contract ByteArray {
     function setB1() public { 
         bytes2 byteArray1 = hex"dead";
         b1.push(byteArray1);
+    } 
+
+    function setPop() public { 
+        b.pop();
+        b1.pop();
     } 
 } 
 
@@ -214,24 +229,46 @@ Conversion Between string and bytes
 */
 
 contract StringBytesConversion { 
-	// Converts an Ethereum address to bytes20 
-	function addressToBytes20(string calldata a) public pure returns (bytes memory) { 
+	// Converts an String to bytes value
+	function a1(string calldata a) public pure returns (bytes memory) { 
 		return bytes(a); 
 	} 
 
-	// Converts a bytes20 value to an Ethereum address 
-	function bytes20ToAddress(bytes memory b) public pure returns (string memory) { 
+	// Converts a bytes value to String
+	function b1(bytes memory b) public pure returns (string memory) { 
 		return string(b); 
 	} 
 
 	// Converts a bytes20 value to an Ethereum address 
-	function bytes20ToAddress1(bytes4 b) public pure returns (uint32) { 
+	function c1(bytes4 b) public pure returns (uint32) { 
 		return uint32(b); 
 	} 
 
     // Converts a bytes20 value to an Ethereum address 
-	function bytes20ToAddress2(bytes32 b) public pure returns (uint) { 
+	function d1(uint32 b) public pure returns (bytes4) { 
+		return bytes4(b); 
+	} 
+
+    function e1(bytes10 b) public pure returns (uint80) { 
+		return uint80(b); 
+	} 
+
+    function e2() public pure returns (uint80) { 
+		return uint80(bytes10(hex"34cdA3")); 
+	} 
+
+    function f1(uint80 b) public pure returns (bytes10) { 
+		return bytes10(b); 
+	} 
+
+    // Converts a bytes20 value to an Ethereum address 
+	function g1(bytes32 b) public pure returns (uint) { 
 		return uint(b); 
+	} 
+
+    // Converts a bytes20 value to an Ethereum address 
+	function h1(uint b) public pure returns (bytes32) { 
+		return bytes32(b); 
 	} 
 } 
 

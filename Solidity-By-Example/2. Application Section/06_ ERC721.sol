@@ -195,4 +195,33 @@ contract MyNFT is ERC721 {
         require(msg.sender == _ownerOf[id], "not owner");
         _burn(id);
     }
+
+    function supportsInterface()
+        external
+        pure
+        returns (bytes4, bytes4)
+    {
+        return(type(IERC721).interfaceId, type(IERC165).interfaceId);
+    }
+
+    function balanceOf1(address owner) external view returns (uint256) {
+        require(owner != address(0), "owner = zero address");
+        return _balanceOf[owner];
+    }
+
+    function getApproved1(uint256 id) external view returns (address) {
+        require(_ownerOf[id] != address(0), "token doesn't exist");
+        return _approvals[id];
+    }
+
+    function _isApprovedOrOwner1(address owner, address spender, uint256 id)
+        internal
+        view
+        returns (bool)
+    {
+        return (
+            spender == owner || isApprovedForAll[owner][spender]
+                || spender == _approvals[id]
+        );
+    }
 }

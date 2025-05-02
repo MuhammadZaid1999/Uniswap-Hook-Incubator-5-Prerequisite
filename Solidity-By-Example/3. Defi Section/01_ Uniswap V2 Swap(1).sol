@@ -444,17 +444,20 @@ contract UniswapV2SwapExamplesTest is Test {
     // Swap ETH -> DAI (ETH for exact tokens)
     function testSwapETHForExactTokens() public {
         uint256 ethAmount = 1e18;
+        uint256 amountOut = 1500e18;
         address[] memory path = new address[](2);
         path[0] = WETH;
         path[1] = DAI;
 
         uint256 daiBefore = dai.balanceOf(address(this));
         console2.log("DAI before", daiBefore);
-        uint256[] memory amounts = uni.swapETHForExactTokens{value: ethAmount}(ethAmount * 100, path);
+        console2.log("Eth before", address(uni).balance);
+        uint256[] memory amounts = uni.swapETHForExactTokens{value: ethAmount}(amountOut, path);
         uint256 daiAfter = dai.balanceOf(address(this));
         console2.log("DAI after", daiAfter);
+        console2.log("Eth after", address(uni).balance);
         console2.log("DAI", daiAfter - daiBefore);
-        assertEq(amounts[1], 100 ether, "Incorrect DAI amount");
+        assertEq(amounts[1], amountOut, "Incorrect DAI amount");
     }
 
     // Fee-on-transfer: DAI -> USDC

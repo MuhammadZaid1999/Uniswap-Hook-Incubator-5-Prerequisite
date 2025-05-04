@@ -436,20 +436,20 @@ contract UniswapV2AddLiquidityTest is Test {
     //     );
     // }
 
-    // function testRemoveLiquidityETHSupportingFeeOnTransferTokens() public {
-    //     uni.addLiquidityETH{value: 1 ether}(
-    //         address(DAI),
-    //         1000 * 1e6,
-    //         1,
-    //         1,
-    //         block.timestamp
-    //     );
+    function testRemoveLiquidityETHSupportingFeeOnTransferTokens() public {
+        uni.addLiquidityETH{value: 1 ether}(
+            address(DAI),
+            1000 * 1e6,
+            1,
+            1,
+            block.timestamp
+        );
 
-    //     uni.removeLiquidityETHSupportingFeeOnTransferTokens(
-    //         address(DAI),
-    //         block.timestamp
-    //     );
-    // }
+        uni.removeLiquidityETHSupportingFeeOnTransferTokens(
+            address(DAI),
+            block.timestamp
+        );
+    }
 
     // function testRemoveLiquidityETHWithPermitSupportingFeeOnTransferTokens() public {
     //     uni.addLiquidityETH{value: 1 ether}(

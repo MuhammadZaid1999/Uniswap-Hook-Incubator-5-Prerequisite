@@ -243,6 +243,34 @@ contract UniswapV2SwapExamples {
         );
     }
 
+    function getAmountsOut(uint256 amountIn, address[] memory path) public view returns (uint256[] memory amounts) {
+        return router.getAmountsOut(amountIn, path);
+    }
+
+    function getAmountsIn(uint256 amountOut, address[] memory path) public view returns (uint256[] memory amounts) {
+        return router.getAmountsIn(amountOut, path);
+    }
+
+    function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) public view returns (uint256) {
+        return router.getAmountOut(amountIn, reserveIn, reserveOut);
+    }
+
+    function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) public view returns (uint256) {
+        return router.getAmountIn(amountOut, reserveIn, reserveOut);
+    }
+
+    function quote(uint amountA, uint reserveA, uint reserveB) public view returns (uint256) {
+        return router.quote(amountA, reserveA, reserveB);
+    }
+
+    function factory() public view returns (address) {
+        return router.factory();
+    }
+
+    function WETH_ADDRESS() public view returns (address) {
+        return router.WETH();
+    }
+
 }
 
 
@@ -260,6 +288,8 @@ import {
 
 
 contract UniswapV2SwapExamplesTest is Test {
+
+    address private constant FACTORY = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
 
     // ---------- Addresses For Ethereum Mainnet ----------
     address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -517,5 +547,118 @@ contract UniswapV2SwapExamplesTest is Test {
 
         console2.log("ETH received", ethAfter - ethBefore);
         assertGt(ethAfter, ethBefore, "No ETH received");
+    }
+
+    function testGetAmountsOut() public view{
+        address[] memory path = new address[](2);
+        path[0] = WETH;
+        path[1] = DAI;
+
+        uint256 amountIn = 1 ether;
+        uint256[] memory amounts = uni.getAmountsOut(amountIn, path);
+        console2.log("amount0", amounts[0]);
+        console2.log("amount1", amounts[1]);
+
+        console2.log("ETH In:", amountIn);
+        console2.log("DAI Out (est.):", amounts[1]);
+
+        assertGt(amounts[1], 0, "Expected output must be > 0");
+    }
+
+    function testGetAmountsOut1() public view{
+        address[] memory path = new address[](3);
+        path[0] = WETH;
+        path[1] = DAI;
+        path[2] = USDC;
+
+        uint256 amountIn = 1 ether;
+        uint256[] memory amounts = uni.getAmountsOut(amountIn, path);
+        console2.log("amount0", amounts[0]);
+        console2.log("amount1", amounts[1]);
+        console2.log("amount2", amounts[2]);
+
+        console2.log("ETH In:", amountIn);
+        console2.log("USDC Out (est.):", amounts[2]);
+
+        assertGt(amounts[2], 0, "Expected output must be > 0");
+    }
+
+    function testGetAmountsIn() public view{
+        address[] memory path = new address[](2);
+        path[0] = WETH;
+        path[1] = DAI;
+
+        uint256 amountOut = 100 * 1e18; // 100 DAI
+        uint256[] memory amounts = uni.getAmountsIn(amountOut, path);
+        console2.log("amount0", amounts[0]);
+        console2.log("amount1", amounts[1]);
+
+        console2.log("DAI Out:", amountOut);
+        console2.log("ETH In Required (est.):", amounts[0]);
+
+        assertGt(amounts[0], 0, "Expected input must be > 0");
+    }
+
+    function testGetAmountsIn1() public view{
+        address[] memory path = new address[](3);
+        path[0] = WETH;
+        path[1] = DAI;
+        path[2] = USDC;
+
+        uint256 amountOut = 100 * 1e6; // 100 USDC
+        uint256[] memory amounts = uni.getAmountsIn(amountOut, path);
+        console2.log("amount0", amounts[0]);
+        console2.log("amount1", amounts[1]);
+        console2.log("amount2", amounts[2]);
+
+        console2.log("USDC Out:", amountOut);
+        console2.log("ETH In Required (est.):", amounts[0]);
+
+        assertGt(amounts[0], 0, "Expected input must be > 0");
+    }
+
+    function testQuote() public view {
+        uint256 amountA = 2e18;
+        uint256 reserveA = 10e18;
+        uint256 reserveB = 20e18;
+
+        uint256 quoted = uni.quote(amountA, reserveA, reserveB);
+
+        console2.log("Quote (tokenB for tokenA):", quoted);
+        assertEq(quoted, 4e18); // Expected: amountA * reserveB / reserveA
+    }
+
+    function testGetAmountOut() public view {
+        uint256 amountIn = 1e18;
+        uint256 reserveIn = 10e18;
+        uint256 reserveOut = 20e18;
+
+        uint256 out = uni.getAmountOut(amountIn, reserveIn, reserveOut);
+        console2.log("Estimated Amount Out:", out);
+
+        assertGt(out, 1.8e18, "Output must be > 0"); // amountIn * reserveOut / (reserveIn + amountIn)
+    }
+
+    function testGetAmountIn() public view {
+        uint256 amountOut = 1e18;
+        uint256 reserveIn = 10e18;
+        uint256 reserveOut = 20e18;
+
+        uint256 inRequired = uni.getAmountIn(amountOut, reserveIn, reserveOut);
+        console2.log("Estimated Amount In:", inRequired);
+
+        assertGt(inRequired, 0.5e18, "Input must be > 0"); // amountOut * reserveIn / (reserveOut - amountOut)
+    }
+
+    function testFactory() public view {
+        address factoryAddr = uni.factory();
+        console2.log("Uniswap V2 Factory:", factoryAddr);
+        assert(factoryAddr == FACTORY); // factory address should be equals
+    }
+
+    function testWETHAddress() public view {
+        address wethAddr = uni.WETH_ADDRESS();
+        console2.log("WETH Address:", wethAddr);
+        assertEq(wethAddr, WETH); // weth address should be the same as the WETH address
     }
 }

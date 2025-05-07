@@ -63,6 +63,11 @@ interface ISwapRouter02 {
         returns (uint256 amountIn);     
 }
 
+interface IWETH is IERC20 {
+    function deposit() external payable;
+    function withdraw(uint256) external;
+}
+
 contract UniswapV3MultiHopSwap {
     address constant SWAP_ROUTER_02 = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
     address constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -73,17 +78,15 @@ contract UniswapV3MultiHopSwap {
     IERC20 private constant weth = IERC20(WETH);
     IERC20 private constant dai = IERC20(DAI);
 
-    function swapExactInputMultiHop(uint256 amountIn, uint256 amountOutMin)
-        external
-    {
+    receive() external payable {}
+
+    function swapExactInputMultiHop(uint256 amountIn, uint256 amountOutMin) external {
         weth.transferFrom(msg.sender, address(this), amountIn);
         weth.approve(address(router), amountIn);
 
-        bytes memory path =
-            abi.encodePacked(WETH, uint24(3000), USDC, uint24(100), DAI);
+        bytes memory path = abi.encodePacked(WETH, uint24(3000), USDC, uint24(100), DAI);
 
-        ISwapRouter02.ExactInputParams memory params = ISwapRouter02
-            .ExactInputParams({
+        ISwapRouter02.ExactInputParams memory params = ISwapRouter02.ExactInputParams({
             path: path,
             recipient: msg.sender,
             amountIn: amountIn,
@@ -93,17 +96,13 @@ contract UniswapV3MultiHopSwap {
         router.exactInput(params);
     }
 
-    function swapExactOutputMultiHop(uint256 amountOut, uint256 amountInMax)
-        external
-    {
+    function swapExactOutputMultiHop(uint256 amountOut, uint256 amountInMax) external {
         weth.transferFrom(msg.sender, address(this), amountInMax);
         weth.approve(address(router), amountInMax);
 
-        bytes memory path =
-            abi.encodePacked(DAI, uint24(100), USDC, uint24(3000), WETH);
+        bytes memory path = abi.encodePacked(DAI, uint24(100), USDC, uint24(3000), WETH);
 
-        ISwapRouter02.ExactOutputParams memory params = ISwapRouter02
-            .ExactOutputParams({
+        ISwapRouter02.ExactOutputParams memory params = ISwapRouter02.ExactOutputParams({
             path: path,
             recipient: msg.sender,
             amountOut: amountOut,
@@ -117,7 +116,85 @@ contract UniswapV3MultiHopSwap {
             weth.transfer(msg.sender, amountInMax - amountIn);
         }
     }
+
+    function swapExactInputEthToTokenMultiHop(address tokenOut, uint256 amountOutMin) external payable {
+        require(msg.value > 0, "Must send ETH");
+        IWETH(WETH).deposit{value: msg.value}();
+
+        IWETH(WETH).approve(address(router), msg.value);
+
+        bytes memory path = abi.encodePacked(WETH, uint24(3000), USDC, uint24(100), tokenOut);
+
+        ISwapRouter02.ExactInputParams memory params = ISwapRouter02.ExactInputParams({
+            path: path,
+            recipient: msg.sender,
+            amountIn: msg.value,
+            amountOutMinimum: amountOutMin
+        });
+
+        router.exactInput(params);
+    }
+
+    function swapExactOutputEthToTokenMultiHop(address tokenOut, uint256 amountOut, uint256 amountInMax) external payable {
+        require(msg.value >= amountInMax, "Insufficient ETH");
+        IWETH(WETH).deposit{value: amountInMax}();
+        IWETH(WETH).approve(address(router), amountInMax);
+
+        bytes memory path = abi.encodePacked(tokenOut, uint24(100), USDC, uint24(3000), WETH);
+
+        ISwapRouter02.ExactOutputParams memory params = ISwapRouter02.ExactOutputParams({
+            path: path,
+            recipient: msg.sender,
+            amountOut: amountOut,
+            amountInMaximum: amountInMax
+        });
+
+        uint256 actualIn = router.exactOutput(params);
+
+        if (actualIn < msg.value) {
+            IWETH(WETH).withdraw(msg.value - actualIn);
+            payable(msg.sender).transfer(msg.value - actualIn);
+        }
+    }
+
+    function swapExactTokenToTokenMultiHop(address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOutMin) external {
+        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+        IERC20(tokenIn).approve(address(router), amountIn);
+
+        bytes memory path = abi.encodePacked(tokenIn, uint24(3000), USDC, uint24(100), tokenOut);
+
+        ISwapRouter02.ExactInputParams memory params = ISwapRouter02.ExactInputParams({
+            path: path,
+            recipient: msg.sender,
+            amountIn: amountIn,
+            amountOutMinimum: amountOutMin
+        });
+
+        router.exactInput(params);
+    }
+
+    function swapExactOutputTokenToTokenMultiHop(address tokenIn, address tokenOut, uint256 amountOut, uint256 amountInMax) external {
+        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountInMax);
+        IERC20(tokenIn).approve(address(router), amountInMax);
+
+        bytes memory path = abi.encodePacked(tokenOut, uint24(100), USDC, uint24(3000), tokenIn);
+
+        ISwapRouter02.ExactOutputParams memory params = ISwapRouter02.ExactOutputParams({
+            path: path,
+            recipient: msg.sender,
+            amountOut: amountOut,
+            amountInMaximum: amountInMax
+        });
+
+        uint256 actualIn = router.exactOutput(params);
+
+        if (actualIn < amountInMax) {
+            IERC20(tokenIn).approve(address(router), 0);
+            IERC20(tokenIn).transfer(msg.sender, amountInMax - actualIn);
+        }
+    }
 }
+
 
 
 /*
@@ -156,6 +233,8 @@ contract UniswapV3MultiHopSwapTest is Test {
     uint256 private constant AMOUNT_OUT = 20 * 1e18;
     uint256 private constant MAX_AMOUNT_IN = 1e18;
 
+    receive() external payable {}
+
     function setUp() public {
         swap = new UniswapV3MultiHopSwap();
         weth.deposit{value: AMOUNT_IN + MAX_AMOUNT_IN}();
@@ -180,4 +259,61 @@ contract UniswapV3MultiHopSwapTest is Test {
         assertEq(weth.balanceOf(address(swap)), 0, "WETH balance of swap != 0");
         assertEq(dai.balanceOf(address(swap)), 0, "DAI balance of swap != 0");
     }
+
+    function test_swapExactInputEthToTokenMultiHop() public {
+        uint256 amountIn = 1 ether;
+        uint256 amountOutMin = 1;
+
+        vm.deal(address(this), amountIn);
+        swap.swapExactInputEthToTokenMultiHop{value: amountIn}(DAI, amountOutMin);
+
+        uint256 daiBalance = dai.balanceOf(address(this));
+        assertGt(daiBalance, 0, "DAI not received");
+    }
+
+    function test_swapExactOutputEthToTokenMultiHop() public {
+        uint256 amountOut = 20 * 1e18;
+        uint256 amountInMax = 1 ether;
+
+        vm.deal(address(this), amountInMax);
+        swap.swapExactOutputEthToTokenMultiHop{value: amountInMax}(DAI, amountOut, amountInMax);
+
+        uint256 daiBalance = dai.balanceOf(address(this));
+        assertGt(daiBalance, 0, "DAI not received");
+    }
+
+    function test_swapExactTokenToTokenMultiHop() public {
+        uint256 amountIn = 1 ether;
+        uint256 amountOutMin = 1;
+
+        // Fund with WETH
+        weth.deposit{value: amountIn}();
+        weth.approve(address(swap), amountIn);
+
+        uint256 daiBefore = dai.balanceOf(address(this));
+
+        // Perform swap from WETH → USDC → DAI
+        swap.swapExactTokenToTokenMultiHop(WETH, DAI, amountIn, amountOutMin);
+
+        uint256 daiAfter = dai.balanceOf(address(this));
+        assertGt(daiAfter, daiBefore, "DAI not received");
+    }
+
+    function test_swapExactOutputTokenToTokenMultiHop() public {
+        uint256 amountOut = 20 * 1e18;
+        uint256 amountInMax = 1 ether;
+
+        // Fund with WETH
+        weth.deposit{value: amountInMax}();
+        weth.approve(address(swap), amountInMax);
+
+        uint256 daiBefore = dai.balanceOf(address(this));
+
+        // Perform swap to receive exact DAI
+        swap.swapExactOutputTokenToTokenMultiHop(WETH, DAI, amountOut, amountInMax);
+
+        uint256 daiAfter = dai.balanceOf(address(this));
+        assertGt(daiAfter, daiBefore, "DAI not received");
+    }
+
 }

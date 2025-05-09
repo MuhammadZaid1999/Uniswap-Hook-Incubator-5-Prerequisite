@@ -6,6 +6,7 @@ Uniswap V3 Single Hop Swap
 pragma solidity ^0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {console2} from "forge-std/console2.sol";
 
 interface IWETH is IERC20 {
     function deposit() external payable;
@@ -77,6 +78,8 @@ contract UniswapV3SingleHopSwap {
     ISwapRouter02 private constant router = ISwapRouter02(SWAP_ROUTER_02);
     IERC20 private constant weth = IERC20(WETH);
     IERC20 private constant dai = IERC20(DAI);
+
+    receive() external payable {}
 
     function swapExactInputSingleHop(uint256 amountIn, uint256 amountOutMin)
         external returns (uint256)
@@ -182,7 +185,7 @@ contract UniswapV3SingleHopSwap {
         router.exactInputSingle(params);
     }
 
-    function swapExactTokenToETH(address token1, uint256 amountIn, uint256 amountOutMin)
+    function swapExactInputTokenToETH(address token1, uint256 amountIn, uint256 amountOutMin)
         external returns (uint256 amountOut)
     {
         dai.transferFrom(msg.sender, address(this), amountIn);
@@ -193,13 +196,15 @@ contract UniswapV3SingleHopSwap {
             tokenIn: token1,
             tokenOut: WETH,
             fee: 3000,
-            recipient: msg.sender,
+            recipient: address(this),
             amountIn: amountIn,
             amountOutMinimum: amountOutMin,
             sqrtPriceLimitX96: 0
         });
 
         amountOut = router.exactInputSingle(params);
+        IWETH(WETH).withdraw(amountOut);
+        payable(msg.sender).transfer(amountOut);
     }
 
     function swapExactOutputEthToUsdc(uint256 amountOut, uint256 amountInMax) external payable {
@@ -218,10 +223,13 @@ contract UniswapV3SingleHopSwap {
         uint256 actualSpent = router.exactOutputSingle{value: amountInMax}(params);
 
         if (actualSpent < msg.value) {
-             // Refund unused ETH
-            // IWETH(WETH).withdraw(msg.value - actualSpent); 
+            console2.log("actualSpent", actualSpent);
+            console2.log("eth", address(this).balance);
+            console2.log("weth", weth.balanceOf(address(this)));
+            console2.log("router weth", weth.balanceOf(address(router)));
+            console2.log("remaining", msg.value - actualSpent);
             // payable(msg.sender).transfer(msg.value - actualSpent);
-            IERC20(WETH).transferFrom(address(router), msg.sender, msg.value - actualSpent);  
+            // ---- cannot find the remaining weth in the contract, fix this later
          }
     }
 
@@ -241,9 +249,16 @@ contract UniswapV3SingleHopSwap {
         uint256 actualSpent = router.exactOutputSingle{value: amountInMax}(params);
 
         if (actualSpent < msg.value) {
-        //     payable(msg.sender).transfer(msg.value - actualSpent);
+            console2.log("actualSpent", actualSpent);
+            console2.log("eth", address(this).balance);
+            console2.log("weth", weth.balanceOf(address(this)));
+            console2.log("router weth", weth.balanceOf(address(router)));
+            console2.log("remaining", msg.value - actualSpent);
+            // payable(msg.sender).transfer(msg.value - actualSpent);
+            // ---- cannot find the remaining weth in the contract, fix this later
         }
     }
+
     function swapExactOutputTokenToToken(address tokenIn, address tokenOut, uint256 amountOut, uint256 amountInMax) external {
         IERC20(tokenIn).transferFrom(msg.sender, address(this), amountInMax);
         IERC20(tokenIn).approve(address(router), amountInMax);
@@ -259,6 +274,32 @@ contract UniswapV3SingleHopSwap {
         });
 
         uint256 actualIn = router.exactOutputSingle(params);
+
+        if (actualIn < amountInMax) {
+            IERC20(tokenIn).approve(address(router), 0);
+            IERC20(tokenIn).transfer(msg.sender, amountInMax - actualIn);
+        }
+    }
+
+    function swapExactOutputTokenToEth(address tokenIn, uint256 amountOut, uint256 amountInMax) 
+        external 
+    {
+        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountInMax);
+        IERC20(tokenIn).approve(address(router), amountInMax);
+
+        ISwapRouter02.ExactOutputSingleParams memory params = ISwapRouter02.ExactOutputSingleParams({
+            tokenIn: tokenIn,
+            tokenOut: WETH,
+            fee: 3000,
+            recipient: address(this),
+            amountOut: amountOut,
+            amountInMaximum: amountInMax,
+            sqrtPriceLimitX96: 0
+        });
+
+        uint256 actualIn = router.exactOutputSingle(params);
+        IWETH(WETH).withdraw(amountOut);
+        payable(msg.sender).transfer(amountOut);
 
         if (actualIn < amountInMax) {
             IERC20(tokenIn).approve(address(router), 0);
@@ -308,6 +349,7 @@ contract UniswapV3SingleHopSwapTest is Test {
     uint256 private constant MAX_AMOUNT_IN = 1e18;
 
     receive() external payable {}
+
 
     function setUp() public {
         swap = new UniswapV3SingleHopSwap();
@@ -364,10 +406,15 @@ contract UniswapV3SingleHopSwapTest is Test {
         deal(address(dai), address(this), type(uint256).max);
         dai.approve(address(swap), amountIn);
 
-        uint256 amountOut = swap.swapExactTokenToETH(DAI, amountIn, 1);
-        
-        assertGt(address(this).balance, 0, "Expected Eth to increase");
+        uint256 ethBefore = address(this).balance;
+
+        uint256 amountOut = swap.swapExactInputTokenToETH(DAI, amountIn, 1);
+
+        uint256 ethAfter = address(this).balance;
+
         assertGt(amountOut, 0, "Expected amountOut to be greater than 0");
+        assertGt(ethAfter, ethBefore, "WETH not received");
+        assertEq(ethAfter - ethBefore, amountOut, "Insufficient WETH received");
     }
 
     function test_swapExactInputTokenToToken() public {
@@ -381,12 +428,16 @@ contract UniswapV3SingleHopSwapTest is Test {
     }
 
     function test_swapExactOutputEthToUsdc() public {
-        uint256 amountOut = 10 * 1e6; // 10 USDC
+        uint256 amountOut = 100 * 1e6; // 10 USDC
         uint256 amountInMax = 1 ether;
 
         uint256 usdcBefore = usdc.balanceOf(address(this));
 
+        // console2.log("weth before", weth.balanceOf(address(this)));
+
         swap.swapExactOutputEthToUsdc{value: amountInMax}(amountOut, amountInMax);
+
+        // console2.log("weth after", weth.balanceOf(address(this)));
 
         uint256 usdcAfter = usdc.balanceOf(address(this));
         assertGe(usdcAfter - usdcBefore, amountOut, "USDC not received");
@@ -394,24 +445,25 @@ contract UniswapV3SingleHopSwapTest is Test {
 
     function test_swapExactOutputEthToToken() public {
         uint256 amountOut = 10 * 1e18; // 10 DAI
-        uint256 amountInMax = 1 ether;
+        uint256 amountInMax = 1 * 1e18;
 
         uint256 daiBefore = dai.balanceOf(address(this));
+        // uint256 ethBefore = address(this).balance;
 
         swap.swapExactOutputEthToToken{value: amountInMax}(DAI, amountOut, amountInMax);
 
         uint256 daiAfter = dai.balanceOf(address(this));
-        assertGe(daiAfter - daiBefore, amountOut, "DAI not received");
+        // uint256 ethAfter = address(this).balance;
+
+        assertEq(daiAfter - daiBefore, amountOut, "DAI not received");
+        // console2.log("ETH diff (refund):", ethAfter - ethBefore);
     }
 
     function test_swapExactOutputTokenToToken() public {
-        uint256 amountOut = 10 * 1e6; // 10 USDC
+        uint256 amountOut = 10 * 1e18; // 10 USDC
         uint256 amountInMax = 1 ether;
 
         uint256 usdcBefore = usdc.balanceOf(address(this));
-
-        // Ensure we have enough WETH
-        weth.approve(address(swap), amountInMax);
 
         swap.swapExactOutputTokenToToken(WETH, USDC, amountOut, amountInMax);
 
@@ -420,5 +472,25 @@ contract UniswapV3SingleHopSwapTest is Test {
 
         // Ensure WETH refund happened
         assertEq(weth.balanceOf(address(swap)), 0, "Leftover WETH on contract");
+    }
+
+    function test_swapExactOutputTokenToEth() public {
+        uint256 amountIn = 5000 * 1e18; // 5000 DAI
+        uint256 amountOut = 1 ether;
+
+        deal(address(dai), address(this), amountIn);
+        dai.approve(address(swap), type(uint256).max);
+        
+        uint256 daiBefore = dai.balanceOf(address(this));
+        uint256 ethBefore = address(this).balance;
+        
+        swap.swapExactOutputTokenToEth(DAI, amountOut, amountIn);
+
+        uint256 daiAfter = dai.balanceOf(address(this));
+        uint256 ethAfter = address(this).balance;
+        
+        assertLt(daiAfter, daiBefore, "DAI not received");
+        assertGt(ethAfter, ethBefore, "WETH not received");
+        assertEq(ethAfter - ethBefore, amountOut, "Insufficient WETH received");
     }
 }

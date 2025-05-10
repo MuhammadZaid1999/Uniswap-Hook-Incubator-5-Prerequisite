@@ -99,7 +99,9 @@ contract UniswapV3MultiHopSwap {
         return amountOut;
     }
 
-    function swapExactOutputMultiHop(uint256 amountOut, uint256 amountInMax) external {
+    function swapExactOutputMultiHop(uint256 amountOut, uint256 amountInMax) 
+        external returns (uint256) 
+    {
         weth.transferFrom(msg.sender, address(this), amountInMax);
         weth.approve(address(router), amountInMax);
 
@@ -118,6 +120,7 @@ contract UniswapV3MultiHopSwap {
             weth.approve(address(router), 0);
             weth.transfer(msg.sender, amountInMax - amountIn);
         }
+        return amountIn;
     }
 
     function swapExactInputEthToTokenMultiHop(address tokenOut, uint256 amountOutMin) external 
@@ -158,7 +161,9 @@ contract UniswapV3MultiHopSwap {
         router.exactInput(params);
     }
 
-    function swapExactOutputEthToTokenMultiHop(address tokenOut, uint256 amountOut, uint256 amountInMax) external payable {
+    function swapExactOutputEthToTokenMultiHop(address tokenOut, uint256 amountOut, uint256 amountInMax) 
+        external payable returns (uint256) 
+    {
         require(msg.value >= amountInMax, "Insufficient ETH");
         IWETH(WETH).deposit{value: amountInMax}();
         IWETH(WETH).approve(address(router), amountInMax);
@@ -174,10 +179,39 @@ contract UniswapV3MultiHopSwap {
 
         uint256 actualIn = router.exactOutput(params);
 
+        uint256 refund;
         if (actualIn < msg.value) {
-            IWETH(WETH).withdraw(msg.value - actualIn);
-            payable(msg.sender).transfer(msg.value - actualIn);
+            refund = msg.value - actualIn;
+            IWETH(WETH).withdraw(refund);
+            payable(msg.sender).transfer(refund);
         }
+
+        return refund;
+    }
+
+    function swapExactOutputEthToTokenMultiHop1(bytes memory path, uint256 amountOut, uint256 amountInMax) 
+        external payable returns (uint256 refund) 
+    {
+        require(msg.value >= amountInMax, "Insufficient ETH");
+        IWETH(WETH).deposit{value: amountInMax}();
+        IWETH(WETH).approve(address(router), amountInMax);
+
+        ISwapRouter02.ExactOutputParams memory params = ISwapRouter02.ExactOutputParams({
+            path: path,
+            recipient: msg.sender,
+            amountOut: amountOut,
+            amountInMaximum: amountInMax
+        });
+
+        uint256 actualIn = router.exactOutput(params);
+
+        if (actualIn < msg.value) {
+            refund = msg.value - actualIn;
+            IWETH(WETH).withdraw(refund);
+            payable(msg.sender).transfer(refund);
+        }
+
+        return refund;
     }
 
     function swapExactInputTokenToTokenMultiHop(address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOutMin) 
@@ -214,7 +248,9 @@ contract UniswapV3MultiHopSwap {
         router.exactInput(params);
     }
 
-    function swapExactOutputTokenToTokenMultiHop(address tokenIn, address tokenOut, uint256 amountOut, uint256 amountInMax) external {
+    function swapExactOutputTokenToTokenMultiHop(address tokenIn, address tokenOut, uint256 amountOut, uint256 amountInMax)
+        external returns (uint256 refund) 
+    {
         IERC20(tokenIn).transferFrom(msg.sender, address(this), amountInMax);
         IERC20(tokenIn).approve(address(router), amountInMax);
 
@@ -230,9 +266,37 @@ contract UniswapV3MultiHopSwap {
         uint256 actualIn = router.exactOutput(params);
 
         if (actualIn < amountInMax) {
+            refund = amountInMax - actualIn;
             IERC20(tokenIn).approve(address(router), 0);
-            IERC20(tokenIn).transfer(msg.sender, amountInMax - actualIn);
+            IERC20(tokenIn).transfer(msg.sender, refund);
         }
+
+        return refund;
+    }
+
+    function swapExactOutputTokenToTokenMultiHop1(bytes memory path, address tokenIn, uint256 amountOut, uint256 amountInMax) 
+        external  returns(uint256)
+    {
+        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountInMax);
+        IERC20(tokenIn).approve(address(router), amountInMax);
+
+        ISwapRouter02.ExactOutputParams memory params = ISwapRouter02.ExactOutputParams({
+            path: path,
+            recipient: msg.sender,
+            amountOut: amountOut,
+            amountInMaximum: amountInMax
+        });
+
+        uint256 actualIn = router.exactOutput(params);
+
+        uint256 refund;
+        if (actualIn < amountInMax) {
+            refund = amountInMax - actualIn;
+            IERC20(tokenIn).approve(address(router), 0);
+            IERC20(tokenIn).transfer(msg.sender, refund);
+        }
+
+        return refund;
     }
 
     function swapExactInputTokenToEthMultiHop(bytes memory path, address tokenIn, uint256 amountIn, uint256 amountOutMin) 
@@ -253,6 +317,33 @@ contract UniswapV3MultiHopSwap {
         payable(msg.sender).transfer(amountOut);
 
         return amountOut;
+    }
+
+    function swapExactOutputTokenToEthMultiHop(bytes memory path, address tokenIn, uint256 amountOut, uint256 amountInMax) 
+        external returns(uint256)
+    {
+        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountInMax);
+        IERC20(tokenIn).approve(address(router), amountInMax);
+
+        ISwapRouter02.ExactOutputParams memory params = ISwapRouter02.ExactOutputParams({
+            path: path,
+            recipient: address(this),
+            amountOut: amountOut,
+            amountInMaximum: amountInMax
+        });
+
+        uint256 actualIn = router.exactOutput(params);
+        IWETH(WETH).withdraw(amountOut);
+        payable(msg.sender).transfer(amountOut);
+
+        uint256 refund;
+        if (actualIn < amountInMax) {
+            refund = amountInMax - actualIn;
+            IERC20(tokenIn).approve(address(router), 0);
+            IERC20(tokenIn).transfer(msg.sender, refund);
+        }
+
+        return refund;
     }
 
 }
@@ -313,7 +404,7 @@ contract UniswapV3MultiHopSwapTest is Test {
     function test_swapExactOutputMultiHop() public {
         uint256 w0 = weth.balanceOf(address(this));
         uint256 d0 = dai.balanceOf(address(this));
-        swap.swapExactOutputMultiHop(AMOUNT_OUT, MAX_AMOUNT_IN);
+        uint256 amountIn = swap.swapExactOutputMultiHop(AMOUNT_OUT, MAX_AMOUNT_IN);
         uint256 w1 = weth.balanceOf(address(this));
         uint256 d1 = dai.balanceOf(address(this));
 
@@ -321,6 +412,7 @@ contract UniswapV3MultiHopSwapTest is Test {
         assertGt(d1, d0, "DAI balance didn't increase");
         assertEq(weth.balanceOf(address(swap)), 0, "WETH balance of swap != 0");
         assertEq(dai.balanceOf(address(swap)), 0, "DAI balance of swap != 0");
+        assertEq(amountIn, w0 - w1, "Amount in is not correct");
     }
 
     function test_swapExactInputEthToTokenMultiHop() public {
@@ -353,10 +445,38 @@ contract UniswapV3MultiHopSwapTest is Test {
         uint256 amountOut = 20 * 1e18;
         uint256 amountInMax = 1 ether;
 
-        swap.swapExactOutputEthToTokenMultiHop{value: amountInMax}(DAI, amountOut, amountInMax);
+        uint256 beforeEth = address(this).balance;
+        uint256 daiBalanceBefore = dai.balanceOf(address(this));
 
-        uint256 daiBalance = dai.balanceOf(address(this));
-        assertGt(daiBalance, 0, "DAI not received");
+        uint256 refund = swap.swapExactOutputEthToTokenMultiHop{value: amountInMax}(DAI, amountOut, amountInMax);
+
+        uint256 daiBalanceAfter = dai.balanceOf(address(this));
+        uint256 ethAfter = address(this).balance;
+        
+        assertEq(amountOut, daiBalanceAfter, "DAI not received");
+        assertGt(daiBalanceAfter, daiBalanceBefore, "DAI not received");
+        assertLt(ethAfter, beforeEth, "ETH not received");
+        assertLt(refund, amountInMax, "ETH not received");
+    }
+
+    function test_swapExactOutputEthToTokenMultiHop1() public {
+        uint256 amountOut = 20 * 1e6;
+        uint256 amountInMax = 10 ether;
+
+        uint256 beforeEth = address(this).balance;
+        uint256 usdcBalanceBefore = usdc.balanceOf(address(this));
+
+        bytes memory path = abi.encodePacked(USDC, uint24(100), DAI, uint24(3000), WETH);
+
+        uint256 refund = swap.swapExactOutputEthToTokenMultiHop1{value: amountInMax}(path, amountOut, amountInMax);
+
+        uint256 usdcBalanceAfter = usdc.balanceOf(address(this));
+        uint256 ethAfter = address(this).balance;
+        
+        assertEq(amountOut, usdcBalanceAfter, "USDC not received");
+        assertGt(usdcBalanceAfter, usdcBalanceBefore, "USDC not received");
+        assertLt(ethAfter, beforeEth, "ETH not received");
+        assertLt(refund, amountInMax, "ETH not received");
     }
 
     function test_swapExactInputTokenToTokenMultiHop() public {
@@ -395,19 +515,41 @@ contract UniswapV3MultiHopSwapTest is Test {
 
     function test_swapExactOutputTokenToTokenMultiHop() public {
         uint256 amountOut = 20 * 1e18;
-        uint256 amountInMax = 1 ether;
-
-        // Fund with WETH
-        weth.deposit{value: amountInMax}();
-        weth.approve(address(swap), amountInMax);
-
+    
         uint256 daiBefore = dai.balanceOf(address(this));
+        uint256 wethBefore = weth.balanceOf(address(this));
 
         // Perform swap to receive exact DAI
-        swap.swapExactOutputTokenToTokenMultiHop(WETH, DAI, amountOut, amountInMax);
+        uint256 refund = swap.swapExactOutputTokenToTokenMultiHop(WETH, DAI, amountOut, MAX_AMOUNT_IN);
 
         uint256 daiAfter = dai.balanceOf(address(this));
+        uint256 wethAfter = weth.balanceOf(address(this));
+
         assertGt(daiAfter, daiBefore, "DAI not received");
+        assertLt(wethAfter, wethBefore, "WETH not received");
+        assertLt(refund, MAX_AMOUNT_IN, "ETH not received");
+    }
+
+    function test_swapExactOutputTokenToTokenMultiHop1() public {
+        uint256 amountIn = 100 * 1e18;
+        uint256 amountOut = 50 * 1e6;
+
+        deal(DAI, address(this), amountIn);
+        dai.approve(address(swap), amountIn);
+    
+        uint256 daiBefore = dai.balanceOf(address(this));
+        uint256 usdcBefore = usdc.balanceOf(address(this));
+
+        // Perform swap to receive exact DAI
+        bytes memory path = abi.encodePacked(USDC, uint24(100), WETH, uint24(3000), DAI);
+        uint256 refund = swap.swapExactOutputTokenToTokenMultiHop1(path, DAI, amountOut, amountIn);
+
+        uint256 daiAfter = dai.balanceOf(address(this));
+        uint256 usdcAfter = usdc.balanceOf(address(this));
+
+        assertLt(daiAfter, daiBefore, "DAI not received");
+        assertGt(usdcAfter, usdcBefore, "USDC not received");
+        assertLt(refund, amountIn, "ETH not received");
     }
 
     function test_swapExactInputTokenToEthMultiHop() public {
@@ -430,6 +572,28 @@ contract UniswapV3MultiHopSwapTest is Test {
         assertEq(amountOut, ethAfter - ethBefore, "Amount out is not correct");
         assertGt(ethAfter, ethBefore, "ETH not received");
         assertLt(daiAfter, daiBefore, "DAI not received");
+    }
+
+    function test_swapExactOutputTokenToEthMultiHop() public {
+        uint256 amountOut = 1 ether;
+        uint256 amountIn = 10_000 * 1e6;
+
+        deal(USDC, address(this), amountIn);
+        usdc.approve(address(swap), amountIn);
+    
+        uint256 ethBefore = address(this).balance;
+        uint256 usdcBefore = usdc.balanceOf(address(this));
+
+        // Perform swap to receive exact DAI
+        bytes memory path = abi.encodePacked(WETH, uint24(3000), DAI, uint24(100), USDC);
+        uint256 refund = swap.swapExactOutputTokenToEthMultiHop(path, USDC, amountOut, amountIn);
+
+        uint256 ethAfter = address(this).balance;
+        uint256 usdcAfter = usdc.balanceOf(address(this));
+
+        assertGt(ethAfter, ethBefore, "ETH not received");
+        assertLt(usdcAfter, usdcBefore, "USDC not received");
+        assertLt(refund, amountIn, "ETH not received");
     }
 
 }

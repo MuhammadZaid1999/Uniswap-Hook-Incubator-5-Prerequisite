@@ -127,10 +127,7 @@ contract UniswapV3MultiHopSwap {
         payable returns (uint256) 
     {
         require(msg.value > 0, "Must send ETH");
-       
-        IWETH(WETH).deposit{value: msg.value}();
-        IWETH(WETH).approve(address(router), msg.value);
-
+    
         bytes memory path = abi.encodePacked(WETH, uint24(3000), USDC, uint24(100), tokenOut);
 
         ISwapRouter02.ExactInputParams memory params = ISwapRouter02.ExactInputParams({
@@ -140,7 +137,7 @@ contract UniswapV3MultiHopSwap {
             amountOutMinimum: amountOutMin
         });
 
-        return router.exactInput(params);
+        return router.exactInput{value: msg.value}(params);
     }
 
     function swapExactInputEthToTokenMultiHop1(bytes memory path, uint256 amountOutMin) 
@@ -148,9 +145,6 @@ contract UniswapV3MultiHopSwap {
     {
         require(msg.value > 0, "Must send ETH");
        
-        IWETH(WETH).deposit{value: msg.value}();
-        IWETH(WETH).approve(address(router), msg.value);
-
         ISwapRouter02.ExactInputParams memory params = ISwapRouter02.ExactInputParams({
             path: path,
             recipient: msg.sender,
@@ -158,7 +152,7 @@ contract UniswapV3MultiHopSwap {
             amountOutMinimum: amountOutMin
         });
 
-        router.exactInput(params);
+        router.exactInput{value: msg.value}(params);
     }
 
     function swapExactOutputEthToTokenMultiHop(address tokenOut, uint256 amountOut, uint256 amountInMax) 

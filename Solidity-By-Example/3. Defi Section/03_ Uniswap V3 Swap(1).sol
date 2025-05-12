@@ -6,7 +6,6 @@ Uniswap V3 Single Hop Swap
 pragma solidity ^0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {console2} from "forge-std/console2.sol";
 
 interface IWETH is IERC20 {
     function deposit() external payable;
@@ -207,37 +206,6 @@ contract UniswapV3SingleHopSwap {
         payable(msg.sender).transfer(amountOut);
     }
 
-    function swapExactOutputEthToUsdc(uint256 amountOut, uint256 amountInMax) external payable {
-        require(msg.value >= amountInMax, "Insufficient ETH sent");
-
-        ISwapRouter02.ExactOutputSingleParams memory params = ISwapRouter02.ExactOutputSingleParams({
-            tokenIn: WETH,
-            tokenOut: USDC,
-            fee: 3000,
-            recipient: address(this),
-            amountOut: amountOut,
-            amountInMaximum: amountInMax,
-            sqrtPriceLimitX96: 0
-        });
-
-        uint256 actualSpent = router.exactOutputSingle{value: amountInMax}(params);
-
-        IERC20(USDC).approve(address(router), 0);
-        IERC20(USDC).transfer(msg.sender, amountOut);
-
-        if (actualSpent < amountInMax) {
-            console2.log("actualSpent", actualSpent);
-            console2.log("eth", address(this).balance);
-            console2.log("eth router", address(router).balance);
-            console2.log("weth", weth.balanceOf(address(this)));
-            console2.log("router weth", weth.balanceOf(address(router)));
-            console2.log("remaining", amountInMax - actualSpent);
-            // Remaining Eth amount is exist in router contract
-         }
-    }
-
-    
-
     function swapExactOutputEthToUsdc1(uint256 amountOut, uint256 amountInMax) external payable returns (uint256) {
         require(msg.value >= amountInMax, "Insufficient ETH sent");
 
@@ -248,16 +216,13 @@ contract UniswapV3SingleHopSwap {
             tokenIn: WETH,
             tokenOut: USDC,
             fee: 3000,
-            recipient: address(this),
+            recipient: msg.sender,
             amountOut: amountOut,
             amountInMaximum: amountInMax,
             sqrtPriceLimitX96: 0
         });
 
         uint256 actualSpent = router.exactOutputSingle(params);
-
-        IERC20(USDC).approve(address(router), 0);
-        IERC20(USDC).transfer(msg.sender, amountOut);
 
         uint256 refund;
         if (actualSpent < amountInMax) {
@@ -267,32 +232,6 @@ contract UniswapV3SingleHopSwap {
         }
 
         return refund;
-    }
-
-    function swapExactOutputEthToToken(address tokenOut, uint256 amountOut, uint256 amountInMax) external payable {
-        require(msg.value >= amountInMax, "Insufficient ETH sent");
-
-        ISwapRouter02.ExactOutputSingleParams memory params = ISwapRouter02.ExactOutputSingleParams({
-            tokenIn: WETH,
-            tokenOut: tokenOut,
-            fee: 3000,
-            recipient: msg.sender,
-            amountOut: amountOut,
-            amountInMaximum: amountInMax,
-            sqrtPriceLimitX96: 0
-        });
-
-        uint256 actualSpent = router.exactOutputSingle{value: amountInMax}(params);
-
-        if (actualSpent < msg.value) {
-            console2.log("actualSpent", actualSpent);
-            console2.log("eth", address(this).balance);
-            console2.log("eth router", address(router).balance);
-            console2.log("weth", weth.balanceOf(address(this)));
-            console2.log("router weth", weth.balanceOf(address(router)));
-            console2.log("remaining", amountInMax - actualSpent);
-            // Remaining Eth amount is exist in router contract
-        }
     }
 
     function swapExactOutputEthToToken1(address tokenOut, uint256 amountOut, uint256 amountInMax) 
@@ -307,16 +246,13 @@ contract UniswapV3SingleHopSwap {
             tokenIn: WETH,
             tokenOut: tokenOut,
             fee: 3000,
-            recipient: address(this),
+            recipient: msg.sender,
             amountOut: amountOut,
             amountInMaximum: amountInMax,
             sqrtPriceLimitX96: 0
         });
 
         uint256 actualSpent = router.exactOutputSingle(params);
-
-        IERC20(tokenOut).approve(address(router), 0);
-        IERC20(tokenOut).transfer(msg.sender, amountOut);
 
         uint256 refund;
         if (actualSpent < msg.value) {
@@ -496,22 +432,6 @@ contract UniswapV3SingleHopSwapTest is Test {
         assertGt(usdcAfter, usdcBefore, "USDC balance should increase");
     }
 
-    function test_swapExactOutputEthToUsdc() public {
-        uint256 amountOut = 100 * 1e6; // 10 USDC
-        uint256 amountInMax = 1 ether;
-
-        uint256 usdcBefore = usdc.balanceOf(address(this));
-
-        // console2.log("weth before", weth.balanceOf(address(this)));
-
-        swap.swapExactOutputEthToUsdc{value: amountInMax}(amountOut, amountInMax);
-
-        // console2.log("weth after", weth.balanceOf(address(this)));
-
-        uint256 usdcAfter = usdc.balanceOf(address(this));
-        assertGe(usdcAfter - usdcBefore, amountOut, "USDC not received");
-    }
-
     function test_swapExactOutputEthToUsdc1() public {
         uint256 amountOut = 100 * 1e6; // 10 USDC
         uint256 amountInMax = 1 ether;
@@ -526,23 +446,7 @@ contract UniswapV3SingleHopSwapTest is Test {
         assertGt(amountInMax, refund, "Refund should be 0");
     }
 
-    function test_swapExactOutputEthToToken() public {
-        uint256 amountOut = 10 * 1e18; // 10 DAI
-        uint256 amountInMax = 1 * 1e18;
-
-        uint256 daiBefore = dai.balanceOf(address(this));
-        // uint256 ethBefore = address(this).balance;
-
-        swap.swapExactOutputEthToToken{value: amountInMax}(DAI, amountOut, amountInMax);
-
-        uint256 daiAfter = dai.balanceOf(address(this));
-        // uint256 ethAfter = address(this).balance;
-
-        assertEq(daiAfter - daiBefore, amountOut, "DAI not received");
-        // console2.log("ETH diff (refund):", ethAfter - ethBefore);
-    }
-
-        function test_swapExactOutputEthToToken1() public {
+    function test_swapExactOutputEthToToken1() public {
         uint256 amountOut = 10 * 1e18; // 10 DAI
         uint256 amountInMax = 1 * 1e18;
 

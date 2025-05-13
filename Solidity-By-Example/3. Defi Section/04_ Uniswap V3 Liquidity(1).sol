@@ -14,13 +14,7 @@ interface IWETH is IERC20 {
 }
 
 interface INonfungiblePositionManager {
-    event IncreaseLiquidity(uint256 indexed tokenId, uint128 liquidity, uint256 amount0, uint256 amount1);
-    
-    event DecreaseLiquidity(uint256 indexed tokenId, uint128 liquidity, uint256 amount0, uint256 amount1);
-    
-    event Collect(uint256 indexed tokenId, address recipient, uint256 amount0, uint256 amount1);
-
-    struct MintParams {
+      struct MintParams {
         address token0;
         address token1;
         uint24 fee;
@@ -165,8 +159,6 @@ contract UniswapV3Liquidity is IERC721Receiver {
         });
 
         (amount0, amount1) = nonfungiblePositionManager.collect(params);
-
-        emit INonfungiblePositionManager.Collect(tokenId, address(this), amount0, amount1);
     }
 
     function increaseLiquidityCurrentRange(
@@ -192,8 +184,6 @@ contract UniswapV3Liquidity is IERC721Receiver {
 
         (liquidity, amount0, amount1) =
             nonfungiblePositionManager.increaseLiquidity(params);
-
-        emit INonfungiblePositionManager.IncreaseLiquidity(tokenId, liquidity, amount0, amount1);
     }
 
     function decreaseLiquidityCurrentRange(uint256 tokenId, uint128 liquidity)
@@ -211,8 +201,6 @@ contract UniswapV3Liquidity is IERC721Receiver {
 
         (amount0, amount1) =
             nonfungiblePositionManager.decreaseLiquidity(params);
-
-        emit INonfungiblePositionManager.DecreaseLiquidity(tokenId, liquidity, amount0, amount1);
     }
 }
 
